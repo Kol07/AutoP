@@ -11,3 +11,6 @@ JSON File in -> 3 Workflows
 3. LLM checks against "motherhood" statement (catch-all basically)
 
 3 Workflows -> Frontend which displays articles in order of IR>History>Motherhood followed by most tagged
+
+
+scp -r ./models dsta@192.168.2.2:/home/dsta/dgx_drive/Rayden/Projects/AutoPOROTW
