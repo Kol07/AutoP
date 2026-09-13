@@ -23,4 +23,6 @@ services:
     command: 
       - --model
       - ${VLLM_EMBED_MODEL}
+      - --gpu-memory-utilization
+      - "0.15" # 15% of 80GB
     

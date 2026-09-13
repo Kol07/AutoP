@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from ..schemas.article_schema import ArticleEmbedRequest
 from ..services.embedArticle_service import embed_text
@@ -9,8 +9,8 @@ router = APIRouter(
 )
 
 @router.post("/embed")
-async def embed_article_route(article: ArticleEmbedRequest):
-    embedding = await embed_text(article.text)
+async def embed_article_route(request: Request, article: ArticleEmbedRequest):
+    embedding = await embed_text(request, article.text)
 
     return {
         "embedding": embedding
