@@ -1,0 +1,21 @@
+services:
+
+  backend:
+    build: ./backend
+
+    environment:
+      VLLM_EMBED_URL: ${VLLM_EMBED_URL}
+      DATABASE_URL: ${DATABASE_URL}
+
+  vllm-embed:
+    image: vllm/vllm-openai:v0.29.0-cu129
+    ports:
+      - "8001:8000" # remove when deploying, only for host to talk to it, ie testing
+    
+    volumes:
+      - ./models/qwen3-embedding-4b:/models/qwen3-embedding-4b:ro
+
+    command: 
+      - --model
+      - ${VLLM_EMBED_MODEL}
+    

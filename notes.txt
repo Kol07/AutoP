@@ -1,0 +1,13 @@
+
+
+JSON File in -> 3 Workflows 
+
+1. LLM checks against POROTW IR 
+1.1. Considering to check against CIP IR just to make sure no overlap, test with POROTW IR first then if necessary add it
+
+2. Embed article and check against history of processed articles and if similarity >X, flag as relevant
+2.1 Using postgres vector db and their similarity func, Embeding model (Qwen3-0.6B or 4B) only to get embeddings
+
+3. LLM checks against "motherhood" statement (catch-all basically)
+
+3 Workflows -> Frontend which displays articles in order of IR>History>Motherhood followed by most tagged
