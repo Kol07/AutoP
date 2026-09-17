@@ -1,11 +1,28 @@
 services:
+  frontend:
+    build: path
 
   backend:
     build: ./backend
 
     environment:
       VLLM_EMBED_URL: ${VLLM_EMBED_URL}
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: >-
+        postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  
+  db:
+    image: pgvector/pgvector:0.8.6-pg18
+    container_name: AutoPOROTW_DB
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+    ports:
+      - "7100:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
 
   vllm-embed:
     image: vllm/vllm-openai:v0.29.0-cu129
@@ -25,4 +42,6 @@ services:
       - ${VLLM_EMBED_MODEL}
       - --gpu-memory-utilization
       - "0.15" # 15% of 80GB
-    
+
+volumes:
+ postgres_data:
