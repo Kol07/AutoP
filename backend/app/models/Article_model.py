@@ -5,10 +5,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
-from .mixins import IdMixin, SoftDeleteMixin, TimestampMixin
+from .mixins import IdMixin, SoftDeleteMixin, TimestampMixin, CreatedAtMixin
 
 
-class Article(IdMixin, TimestampMixin, SoftDeleteMixin, Base):
+class Article(IdMixin, CreatedAtMixin, TimestampMixin, SoftDeleteMixin, Base):
     __tablename__ = "articles"
 
     processing_batch_id: Mapped[str] = mapped_column(

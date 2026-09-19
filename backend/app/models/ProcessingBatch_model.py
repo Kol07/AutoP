@@ -17,8 +17,8 @@ class ProcessingBatch(IdMixin, CreatedAtMixin, Base):
         PROCESSING_STATUS_ENUM,
         nullable=False,
     )
-    total_articles: Mapped[int] = mapped_column(Integer, nullable=False)
-    processed_articles: Mapped[int] = mapped_column(Integer, nullable=False)
+    total_articles: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    processed_articles: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
