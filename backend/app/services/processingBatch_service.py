@@ -7,18 +7,12 @@ from ..models.enums import ProcessingStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 
 class ProcessingBatchService:
-    def __init__(
-        self,
-        db: AsyncSession,
-        repository: ProcessingBatchRepository,
-    ):
+    def __init__(self, db: AsyncSession, repository: ProcessingBatchRepository,):
+        
         self.db = db
         self.repository = repository
 
-    async def create_batch(
-        self,
-        data: ProcessingBatchCreate,
-    ) -> ProcessingBatch:
+    async def create_batch(self, data: ProcessingBatchCreate,) -> ProcessingBatch:
         batch = ProcessingBatch(
             filename = data.filename,
             status = ProcessingStatus.PROCESSING

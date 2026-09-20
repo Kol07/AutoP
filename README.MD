@@ -26,7 +26,8 @@
   - Let HTTP methods do the work. Do not include verbs in the endpoint paths
 
 6. Code Semantics:
-  - Use standard camelCase for local variables, objects, instances, and functions.
+  - Use standard camelCase for local variables, objects and instances
+  - Use snake case for functions
     - Prefix asynchronous functions with verbs like fetch, create, update, delete, or calculate
   - Use PascalCase for Classes & Database Models
   

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 
 from ..schemas.article_schema import ArticleEmbedRequest
-from ..services.embedArticle_service import embed_text
+from ..services.article_service import embed_text
 
 router = APIRouter(
     prefix = "/article",
