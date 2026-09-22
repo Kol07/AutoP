@@ -25,6 +25,10 @@ class Article(IdMixin, TimestampMixin, SoftDeleteMixin, Base):
     )
     title: Mapped[str] = mapped_column(Text, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    
+    translatedTitle: Mapped[str] = mapped_column(Text, nullable=True)
+    translatedContent: Mapped[str] = mapped_column(Text, nullable=True)
+    
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     published_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),

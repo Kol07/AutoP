@@ -22,6 +22,11 @@ services:
       - "7100:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
+  
+  adminer:
+    image: adminer
+    ports:
+      - "7101:8080"
 
 
   vllm-embed:

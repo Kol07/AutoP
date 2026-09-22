@@ -15,7 +15,7 @@ class ArticleService():
         self.repository = repository
         
 
-    async def create_article(self, data: ArticleCreate) -> Article:
+    async def create_article(self, data: ArticleCreate) -> Article | None:
         
         hashed_content = hashlib.blake2b(data.content.encode("utf-8"),
                                          digest_size=16).hexdigest()
@@ -30,6 +30,9 @@ class ArticleService():
         )
         
         article = await self.repository.create(article)
+        
+        if article is None:
+            return None
         
         await self.db.commit()
         await self.db.refresh(article)
