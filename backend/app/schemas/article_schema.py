@@ -16,4 +16,11 @@ class ArticleCreate(BaseModel):
 
 class ArticleEmbedRequest(BaseModel):
     text:str
+
+class ArticleEmbeddingsCreate(BaseModel):
+    articleID: str
+    modelName: str
+    modelRevision: str
+    embedding: list[float]
+    embeddingDimension: int
     

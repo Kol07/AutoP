@@ -16,11 +16,11 @@ async def article_json_ingest_route(articles: list[ArticleIngest], pipelineServi
     return await pipelineService.ingest_articles(fileName="tempfile.json", articlesList=articles)
     
 
-## To fix this route later to fit into new coding practices
-@router.post("/embed")
-async def embed_article_route(request: Request, article: ArticleEmbedRequest):
-    embedding = await ArticleService.embed_text(request, article.text)
+# ## To fix this route later to fit into new coding practices
+# @router.post("/embed")
+# async def embed_article_route(request: Request, article: ArticleEmbedRequest):
+#     embedding = await ArticleService.embed_text(request, article.text)
 
-    return {
-        "embedding": embedding
-    }
+#     return {
+#         "embedding": embedding
+#     }

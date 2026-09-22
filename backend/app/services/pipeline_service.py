@@ -1,18 +1,19 @@
-import json
-
+import httpx
 from .processingBatch_service import ProcessingBatchService
 from .article_service import ArticleService
-from ..schemas.article_schema import ArticleCreate
+from .articleEmbedding_service import ArticleEmbeddingService
+from ..schemas.article_schema import ArticleIngest, ArticleCreate
 from ..schemas.processingBatch_schema import ProcessingBatchCreate
 
 class PipelineService():
-    def __init__(self, batchService: ProcessingBatchService, articleService: ArticleService):
+    def __init__(self, batchService: ProcessingBatchService, articleService: ArticleService, articleEmbeddingService: ArticleEmbeddingService):
         
         self.batchService = batchService
         self.articleService = articleService
+        self.articleEmbeddingService = articleEmbeddingService
 
     
-    async def ingest_articles(self, fileName: str, articlesList: list[ArticleCreate]): # might change to zipfile
+    async def ingest_articles(self, fileName: str, articlesList: list[ArticleIngest]): # might change to zipfile
         
         batch_data = ProcessingBatchCreate(filename=fileName)
         batch = await self.batchService.create_batch(batch_data)        
@@ -28,9 +29,9 @@ class PipelineService():
                 
             )
             
-            await self.articleService.create_article(article_data)
+            created_article = await self.articleService.create_article(article_data)
             
-            if article is None:
+            if created_article is None:
                 continue
         
         # Workflow 1
