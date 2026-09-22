@@ -1,4 +1,3 @@
-import httpx
 from .processingBatch_service import ProcessingBatchService
 from .article_service import ArticleService
 from .articleEmbedding_service import ArticleEmbeddingService

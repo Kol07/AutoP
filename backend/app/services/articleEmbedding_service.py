@@ -5,30 +5,33 @@ from ..schemas.article_schema import ArticleEmbeddingsCreate
 from ..repositories.articleEmbedding_repository import ArticleEmbeddingRepository
 from ..models.ArticleEmbedding_model import ArticleEmbedding
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 class ArticleEmbeddingService():
-    def __init__(self, db: AsyncSession, repository: ArticleEmbeddingRepository, httpClient: httpx.AsyncClient):
+    def __init__(self, sessionFactory: async_sessionmaker[AsyncSession], httpClient: httpx.AsyncClient):
         
-        self.db = db
-        self.repository = repository
+        self.sessionFactory = sessionFactory
         self.httpClient = httpClient
     
     async def create_embeddings(self, data: ArticleEmbeddingsCreate) -> ArticleEmbedding:
-        embeddings = ArticleEmbedding(
-            article_id = data.articleID,
-            model_name = data.modelName,
-            model_revision = data.modelRevision,
-            embedding = data.embedding,
-            embedding_dimension = data.embeddingDimension
-        )
-        
-        embeddings = await self.repository.create(embeddings)
-        
-        await self.db.commit()
-        await self.db.refresh(embeddings)
-        
-        return embeddings
+        async with self.sessionFactory() as db:
+            
+            repository = ArticleEmbeddingRepository(db)
+            
+            embeddings = ArticleEmbedding(
+                article_id = data.articleID,
+                model_name = data.modelName,
+                model_revision = data.modelRevision,
+                embedding = data.embedding,
+                embedding_dimension = data.embeddingDimension
+            )
+            
+            embeddings = await repository.create(embeddings)
+            
+            await db.commit()
+            await db.refresh(embeddings)
+            
+            return embeddings
 
     async def embed_text(self, text: str) -> list[float]:
         
