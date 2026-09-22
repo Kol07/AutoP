@@ -1,7 +1,9 @@
 import os
 import httpx
+import asyncio
 
 from ..schemas.article_schema import ArticleEmbeddingsCreate
+from ..repositories.article_repository import ArticleRepository
 from ..repositories.articleEmbedding_repository import ArticleEmbeddingRepository
 from ..models.ArticleEmbedding_model import ArticleEmbedding
 
@@ -12,6 +14,8 @@ class ArticleEmbeddingService():
         
         self.sessionFactory = sessionFactory
         self.httpClient = httpClient
+        
+        self.semaphore = asyncio.Semaphore(10) # 10 concurrent requests
     
     async def create_embeddings(self, data: ArticleEmbeddingsCreate) -> ArticleEmbedding:
         async with self.sessionFactory() as db:
@@ -51,3 +55,45 @@ class ArticleEmbeddingService():
         data = response.json()
 
         return data["data"][0]["embedding"]
+    
+    async def process_article(self, articleID, content: str):
+        
+        async with self.semaphore:
+            
+            embedding = await self.embed_text(content)
+            
+            embedding_data = ArticleEmbeddingsCreate(
+                articleID=articleID,
+                modelName= os.getenv("VLLM_EMBED_MODEL","/models/qwen3-embedding-4b"),
+                modelRevision="v1 22092026",
+                embedding=embedding,
+                embeddingDimension=len(embedding)
+            )
+            
+            await self.create_embeddings(
+                embedding_data
+            )
+    
+    async def process_batch(self, batchID):
+        
+        async with self.sessionFactory() as db:
+            articleRepository = ArticleRepository(db)
+            
+            articles = await articleRepository.get_by_batch_id(
+                batchID
+            )
+        
+        article_data = [
+            (article.id, article.content)
+            for article in articles
+        ]
+        
+        await asyncio.gather(
+        *[
+            self.process_article(
+                article_id,
+                content,
+            )
+            for article_id, content in article_data
+        ]
+        )

@@ -31,6 +31,18 @@ class ArticleRepository:
         result = await self.db.execute(stmt)
 
         return list(result.scalars().all())
+    
+    async def get_by_batch_id(self, batch_id):
+        stmt = (
+            select(Article)
+            .where(
+                Article.processing_batch_id == batch_id
+            )
+        )
+        
+        result = await self.db.execute(stmt)
+        
+        return result.scalars().all()
 
     async def create(self,article: Article,) -> Article | None: # not using ORM statement here because need to use on conflict method in case duplicate content hash is detected
 

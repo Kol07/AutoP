@@ -4,6 +4,8 @@ from .articleEmbedding_service import ArticleEmbeddingService
 from ..schemas.article_schema import ArticleIngest, ArticleCreate
 from ..schemas.processingBatch_schema import ProcessingBatchCreate
 
+import asyncio
+
 class PipelineService():
     def __init__(self, batchService: ProcessingBatchService, articleService: ArticleService, articleEmbeddingService: ArticleEmbeddingService):
         
@@ -33,9 +35,19 @@ class PipelineService():
             if created_article is None:
                 continue
         
-        # Workflow 1
         
-        # Workflow 2
+        await self.run_workflows(batch.id)
         
-        # Workflow 3
-        pass
+        return batch
+    
+    async def run_workflows(self, batchID):
+        
+        await asyncio.gather(
+            # Workflow 1
+            # Workflow 2
+            self.articleEmbeddingService.process_batch(batchID)
+            # Workflow 3
+            
+            
+            
+        )
