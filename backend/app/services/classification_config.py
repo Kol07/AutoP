@@ -27,6 +27,7 @@ class ClassificationSettings:
     guidelineHitCap: int = 3
     similarityTopK: int = 5
     similarityMinimumScore: float = 0.70
+    similarityRelevanceThreshold: float = 0.50
     relevanceThreshold: float = 0.50
     classificationConcurrency: int = 10
 
@@ -52,6 +53,12 @@ class ClassificationSettings:
             0 <= self.similarityMinimumScore <= 1
         ):
             raise ValueError("SIMILARITY_MINIMUM_SCORE must be between 0 and 1")
+        if not isfinite(self.similarityRelevanceThreshold) or not (
+            0 <= self.similarityRelevanceThreshold <= 1
+        ):
+            raise ValueError(
+                "SIMILARITY_RELEVANCE_THRESHOLD must be between 0 and 1"
+            )
         if not isfinite(self.relevanceThreshold) or not (
             0 <= self.relevanceThreshold <= 1
         ):
@@ -76,6 +83,10 @@ class ClassificationSettings:
             guidelineHitCap=_read_int("GUIDELINE_HIT_CAP", 3),
             similarityTopK=_read_int("SIMILARITY_TOP_K", 5),
             similarityMinimumScore=_read_float("SIMILARITY_MINIMUM_SCORE", 0.70),
+            similarityRelevanceThreshold=_read_float(
+                "SIMILARITY_RELEVANCE_THRESHOLD",
+                0.50,
+            ),
             relevanceThreshold=_read_float(
                 "CLASSIFICATION_RELEVANCE_THRESHOLD",
                 0.50,

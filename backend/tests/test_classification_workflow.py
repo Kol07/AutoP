@@ -136,6 +136,42 @@ class SimilarityResultTests(unittest.TestCase):
         self.assertEqual(result.score, 0.5)
         self.assertEqual(result.result, RelevanceResult.RELEVANT)
 
+    def test_similarity_uses_its_own_relevance_threshold(self) -> None:
+        service = ArticleSimilarityService(
+            sessionFactory=FakeSessionFactory(),
+            settings=ClassificationSettings(
+                similarityRelevanceThreshold=0.60,
+                relevanceThreshold=0.40,
+            ),
+        )
+
+        result = service._calculate_result(
+            [
+                SimilarArticleMatch(
+                    articleID="relevant",
+                    similarityScore=0.8,
+                    relevanceResult=RelevanceResult.RELEVANT,
+                ),
+                SimilarArticleMatch(
+                    articleID="irrelevant",
+                    similarityScore=0.8,
+                    relevanceResult=RelevanceResult.IRRELEVANT,
+                ),
+            ]
+        )
+
+        self.assertEqual(result.score, 0.5)
+        self.assertEqual(result.result, RelevanceResult.IRRELEVANT)
+        self.assertEqual(
+            ClassificationService(
+                sessionFactory=FakeSessionFactory(),
+                llmService=SimpleNamespace(),
+                similarityService=SimpleNamespace(),
+                settings=service.settings,
+            )._get_system_prediction(result.score),
+            RelevanceResult.RELEVANT,
+        )
+
     def test_no_matches_have_no_score_or_verdict(self) -> None:
         result = self.service._calculate_result([])
 

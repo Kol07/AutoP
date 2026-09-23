@@ -81,7 +81,7 @@ class ArticleSimilarityService:
         score = min(max(relevantSimilarity / totalSimilarity, 0.0), 1.0)
         result = (
             RelevanceResult.RELEVANT
-            if score >= self.settings.relevanceThreshold
+            if score >= self.settings.similarityRelevanceThreshold
             else RelevanceResult.IRRELEVANT
         )
 
