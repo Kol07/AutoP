@@ -24,10 +24,7 @@ class ArticleLLMService:
             "/models/qwen3.8-27B-FP8",
         )
 
-    async def classify_article(
-        self,
-        content: str,
-    ) -> LLMClassificationResult:
+    async def classify_article(self, content: str,) -> LLMClassificationResult:
 
         async with self.semaphore:
 

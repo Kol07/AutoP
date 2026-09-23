@@ -15,8 +15,18 @@ class ArticleEmbeddingService():
         self.sessionFactory = sessionFactory
         self.httpClient = httpClient
         
-        self.semaphore = asyncio.Semaphore(10) # 10 concurrent requests
-    
+        self.semaphore = asyncio.Semaphore(
+            int(os.getenv("EMBEDDING_CONCURRENCY", "10")) # 10 concurrent requests
+        )
+        
+        self.embeddingURL = os.getenv(
+            "VLLM_EMBED_URL",
+            "http://192.168.2.2:7000") # fallback to testing server
+        
+        self.embeddingModel = os.getenv(
+            "VLLM_EMBED_MODEL",
+            "/models/qwen3-embedding-4b")
+        
     async def create_embeddings(self, data: ArticleEmbeddingsCreate) -> ArticleEmbedding:
         async with self.sessionFactory() as db:
             
@@ -38,15 +48,13 @@ class ArticleEmbeddingService():
             return embeddings
 
     async def embed_text(self, text: str) -> list[float]:
-        
-        VLLM_EMBED_URL = os.getenv("VLLM_EMBED_URL","http://192.168.2.2:7000") # fallback to testing server
-        VLLM_EMBED_MODEL = os.getenv("VLLM_EMBED_MODEL","/models/qwen3-embedding-4b")
+    
         
         response = await self.httpClient.post(
-            f"{VLLM_EMBED_URL}/v1/embeddings",
+            f"{self.embeddingURL}/v1/embeddings",
             json={
                 "input": text,
-                "model": VLLM_EMBED_MODEL,
+                "model": self.embeddingModel,
             },
         )
 
