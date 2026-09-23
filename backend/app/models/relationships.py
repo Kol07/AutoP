@@ -73,6 +73,10 @@ ClassificationRun.matches = relationship(
     ClassificationMatch,
     back_populates="classification_run",
     foreign_keys=[ClassificationMatch.classification_run_id],
+    order_by=(
+        ClassificationMatch.similarity_score.desc(),
+        ClassificationMatch.matched_article_id.asc(),
+    ),
 )
 
 # reviews

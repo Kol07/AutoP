@@ -9,7 +9,7 @@ from alembic.config import Config
 from sqlalchemy import Enum, inspect
 from sqlalchemy.exc import SAWarning
 from sqlalchemy.orm import configure_mappers
-from sqlalchemy.schema import UniqueConstraint
+from sqlalchemy.schema import CheckConstraint, UniqueConstraint
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -105,8 +105,16 @@ class ModelSchemaTests(unittest.TestCase):
             column = Base.metadata.tables[table_name].c[column_name]
             foreign_key = next(iter(column.foreign_keys))
             self.assertEqual(foreign_key.ondelete, ondelete)
-            if not column.unique:
-                self.assertTrue(column.index)
+            supporting_unique_constraint = any(
+                isinstance(constraint, UniqueConstraint)
+                and next(iter(constraint.columns)).name == column_name
+                for constraint in column.table.constraints
+                if constraint.columns
+            )
+            self.assertTrue(
+                column.index or column.unique or supporting_unique_constraint,
+                f"{table_name}.{column_name} needs a supporting index",
+            )
 
     def test_unique_constraints_match_the_erd(self) -> None:
         expected = {
@@ -117,7 +125,6 @@ class ModelSchemaTests(unittest.TestCase):
             "reviews": {("classification_run_id",)},
             "classification_matches": {
                 ("classification_run_id", "matched_article_id"),
-                ("classification_run_id", "rank"),
             },
         }
 
@@ -129,6 +136,24 @@ class ModelSchemaTests(unittest.TestCase):
                 if isinstance(constraint, UniqueConstraint)
             }
             self.assertEqual(actual_columns, expected_columns)
+
+    def test_similarity_classification_columns_and_constraints(self) -> None:
+        classification_runs = Base.metadata.tables["classification_runs"]
+        classification_matches = Base.metadata.tables["classification_matches"]
+
+        self.assertIn("similarity_result", classification_runs.c)
+        self.assertIn("confidence_score", classification_runs.c)
+        self.assertNotIn("rank", classification_matches.c)
+
+        check_constraints = {
+            constraint.name
+            for constraint in classification_runs.constraints
+            if isinstance(constraint, CheckConstraint)
+        }
+        self.assertIn(
+            "ck_classification_runs_confidence_score_range",
+            check_constraints,
+        )
 
     def test_native_enums_store_erd_values(self) -> None:
         status_type = ProcessingBatch.__table__.c.status.type
@@ -162,6 +187,18 @@ class OfflineMigrationTests(unittest.TestCase):
         self.assertIn("CREATE TABLE processing_batches", sql)
         self.assertIn("CREATE TABLE classification_matches", sql)
         self.assertIn("CREATE INDEX ix_articles_processing_batch_id", sql)
+        self.assertIn("ADD COLUMN similarity_result relevance_result", sql)
+        self.assertIn("ADD COLUMN confidence_score FLOAT", sql)
+        self.assertIn("DROP COLUMN rank", sql)
+
+    def test_similarity_migration_downgrade_compiles(self) -> None:
+        config = self._config()
+        command.downgrade(config, "20260923_0001:62e573ed0016", sql=True)
+        sql = config.output_buffer.getvalue()
+
+        self.assertIn("ADD COLUMN rank INTEGER", sql)
+        self.assertIn("ROW_NUMBER() OVER", sql)
+        self.assertIn("DROP COLUMN confidence_score", sql)
 
     def test_downgrade_compiles_without_a_database_connection(self) -> None:
         config = self._config()

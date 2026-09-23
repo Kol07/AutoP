@@ -11,17 +11,15 @@ class ArticleLLMService:
         self.httpClient = httpClient
 
         self.semaphore = asyncio.Semaphore(
-            int(os.getenv("LLM_CONCURRENCY", "10"))
+            int(os.getenv("LLM_CONCURRENCY") or "10")
         )
 
-        self.llmURL = os.getenv(
-            "VLLM_LLM_URL",
-            "http://192.168.2.2:7001",
+        self.llmURL = (
+            os.getenv("VLLM_LLM_URL") or "http://192.168.2.2:7001"
         )
 
-        self.llmModel = os.getenv(
-            "VLLM_LLM_MODEL",
-            "/models/qwen3.8-27B-FP8",
+        self.llmModel = (
+            os.getenv("VLLM_LLM_MODEL") or "/models/qwen3.8-27B-FP8"
         )
 
     async def classify_article(self, content: str,) -> LLMClassificationResult:

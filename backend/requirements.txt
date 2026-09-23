@@ -1,5 +1,9 @@
 alembic
 asyncpg
+fastapi
+httpx
 pgvector
+pydantic
+python-dotenv
 python-ulid
 SQLAlchemy

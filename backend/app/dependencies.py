@@ -9,6 +9,9 @@ from .repositories.article_repository import ArticleRepository
 from .services.processingBatch_service import ProcessingBatchService
 from .services.article_service import ArticleService
 from .services.articleEmbedding_service import ArticleEmbeddingService
+from .services.articleLLM_service import ArticleLLMService
+from .services.articleSimilarity_service import ArticleSimilarityService
+from .services.classificationService import ClassificationService
 from .services.pipeline_service import PipelineService
 
 import httpx
@@ -66,14 +69,38 @@ def get_http_client(
 ) -> httpx.AsyncClient:
     return request.app.state.http_client
 
-def get_article_embedding_service(
-    httpClient: httpx.AsyncClient = Depends(get_http_client)
-) -> ArticleEmbeddingService:
 
+def get_article_embedding_service(
+    httpClient: httpx.AsyncClient = Depends(get_http_client),
+) -> ArticleEmbeddingService:
     return ArticleEmbeddingService(
         sessionFactory=AsyncSessionLocal,
-        httpClient=httpClient
+        httpClient=httpClient,
     )
+
+
+def get_article_llm_service(
+    httpClient: httpx.AsyncClient = Depends(get_http_client),
+) -> ArticleLLMService:
+    return ArticleLLMService(httpClient=httpClient)
+
+
+def get_article_similarity_service() -> ArticleSimilarityService:
+    return ArticleSimilarityService(sessionFactory=AsyncSessionLocal)
+
+
+def get_classification_service(
+    llmService: ArticleLLMService = Depends(get_article_llm_service),
+    similarityService: ArticleSimilarityService = Depends(
+        get_article_similarity_service
+    ),
+) -> ClassificationService:
+    return ClassificationService(
+        sessionFactory=AsyncSessionLocal,
+        llmService=llmService,
+        similarityService=similarityService,
+    )
+
 
 ## END OF WORKFLOW SERVICES
 
@@ -86,11 +113,15 @@ def get_pipeline_service(
     ),
     articleEmbeddingService: ArticleEmbeddingService = Depends(
         get_article_embedding_service
-    )
+    ),
+    classificationService: ClassificationService = Depends(
+        get_classification_service
+    ),
 ) -> PipelineService:
 
     return PipelineService(
         batchService=batchService,
         articleService=articleService,
-        articleEmbeddingService= articleEmbeddingService
-        )
+        articleEmbeddingService=articleEmbeddingService,
+        classificationService=classificationService,
+    )

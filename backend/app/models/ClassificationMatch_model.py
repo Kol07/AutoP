@@ -1,4 +1,4 @@
-from sqlalchemy import Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Float, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -15,11 +15,6 @@ class ClassificationMatch(IdMixin, CreatedAtMixin, Base):
             "matched_article_id",
             name="uq_classification_matches_run_article",
         ),
-        UniqueConstraint(
-            "classification_run_id",
-            "rank",
-            name="uq_classification_matches_run_rank",
-        ),
     )
 
     classification_run_id: Mapped[str] = mapped_column(
@@ -34,7 +29,6 @@ class ClassificationMatch(IdMixin, CreatedAtMixin, Base):
         index=True,
     )
     similarity_score: Mapped[float] = mapped_column(Float, nullable=False)
-    rank: Mapped[int] = mapped_column(Integer, nullable=False)
     matched_decision: Mapped[RelevanceResult] = mapped_column(
         RELEVANCE_RESULT_ENUM,
         nullable=False,
