@@ -1,6 +1,7 @@
 from .processingBatch_service import ProcessingBatchService
 from .article_service import ArticleService
 from .articleEmbedding_service import ArticleEmbeddingService
+from .classificationService import ClassificationService
 from ..schemas.article_schema import ArticleIngest, ArticleCreate
 from ..schemas.processingBatch_schema import ProcessingBatchCreate
 
@@ -43,11 +44,8 @@ class PipelineService():
     async def run_workflows(self, batchID):
         
         await asyncio.gather(
-            # Workflow 1
-            # Workflow 2
+
             self.articleEmbeddingService.process_batch(batchID)
-            # Workflow 3
-            
             
             
         )

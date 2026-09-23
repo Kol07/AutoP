@@ -23,4 +23,3 @@ class ArticleEmbeddingsCreate(BaseModel):
     modelRevision: str
     embedding: list[float]
     embeddingDimension: int
-    

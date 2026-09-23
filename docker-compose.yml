@@ -47,6 +47,27 @@ services:
       - ${VLLM_EMBED_MODEL}
       - --gpu-memory-utilization
       - "0.15" # 15% of 80GB
+  
+  vllm-llm:
+    image: vllm/vllm-openai:v0.29.0-cu129
+    ports:
+      - "7001:8000" # remove when deploying, only for host to talk to it, ie testing
+    
+    gpus:
+      - driver: nvidia
+        device_ids: ["2"]
+        capabilities: [gpu]
+
+    volumes:
+      - ./models/qwen3.8-27B-FP8:/models/qwen3.8-27B-FP8:ro
+
+    command: 
+      - --model
+      - ${VLLM_EMBED_MODEL}
+      - --gpu-memory-utilization
+      - "0.55" # 55% of 80GB
+      - --max-model-len
+      - "32768" # 32k tokens, model allows up to 200k but we probably don't need that much to fit guidelines + article content, 32k should be extremly comfortable
 
 volumes:
  postgres_data:
