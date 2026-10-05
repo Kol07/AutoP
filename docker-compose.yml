@@ -85,6 +85,8 @@ services:
       - "0.55" # 55% of 80GB
       - --max-model-len
       - "32768" # 32k tokens, model allows up to 200k but we probably don't need that much to fit guidelines + article content, 32k should be extremly comfortable
+      - --max-num-seqs
+      - "32"
 
 volumes:
  postgres_data:
