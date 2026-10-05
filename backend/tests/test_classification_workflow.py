@@ -5,6 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from pydantic import ValidationError
 from sqlalchemy.dialects import postgresql
 
 
@@ -28,6 +29,7 @@ from app.schemas.similarity_schema import (  # noqa: E402
 from app.services.articleSimilarity_service import (  # noqa: E402
     ArticleSimilarityService,
 )
+from app.services.articleLLM_service import ArticleLLMService  # noqa: E402
 from app.services.classificationService import ClassificationService  # noqa: E402
 from app.services.classification_config import ClassificationSettings  # noqa: E402
 from app.services.pipeline_service import PipelineService  # noqa: E402
@@ -61,6 +63,41 @@ class FakeSessionFactory:
 
     def __call__(self):
         return self.session
+
+
+class LLMOutputContractTests(unittest.TestCase):
+    def test_guideline_hits_are_required_in_the_json_schema(self) -> None:
+        schema = LLMClassificationResult.model_json_schema()
+
+        self.assertIn("guidelineHits", schema["required"])
+        self.assertIn(
+            "one item for every matched guideline",
+            schema["properties"]["guidelineHits"]["description"],
+        )
+
+    def test_relevant_guideline_result_requires_a_hit(self) -> None:
+        with self.assertRaisesRegex(ValidationError, "at least one hit"):
+            LLMClassificationResult(
+                guidelineResult=RelevanceResult.RELEVANT,
+                guidelineHits=[],
+                motherhoodResult=RelevanceResult.IRRELEVANT,
+            )
+
+    def test_irrelevant_guideline_result_rejects_hits(self) -> None:
+        with self.assertRaisesRegex(ValidationError, "must be empty"):
+            LLMClassificationResult(
+                guidelineResult=RelevanceResult.IRRELEVANT,
+                guidelineHits=[
+                    GuidelineHit(guidelineID="G1.1.1", reason="Think tank quoted")
+                ],
+                motherhoodResult=RelevanceResult.IRRELEVANT,
+            )
+
+    def test_system_prompt_requires_per_guideline_evidence(self) -> None:
+        prompt = ArticleLLMService(SimpleNamespace())._get_system_prompt()
+
+        self.assertIn("Always return the guidelineHits field", prompt)
+        self.assertIn('guidelineID: "G1.1.1"', prompt)
 
 
 class ClassificationScoringTests(unittest.TestCase):
@@ -311,6 +348,7 @@ class ClassificationOrchestrationTests(unittest.IsolatedAsyncioTestCase):
     async def test_match_persistence_failure_rolls_back(self) -> None:
         llmResult = LLMClassificationResult(
             guidelineResult=RelevanceResult.IRRELEVANT,
+            guidelineHits=[],
             motherhoodResult=RelevanceResult.IRRELEVANT,
         )
         similarityResult = SimilarityClassificationResult()
