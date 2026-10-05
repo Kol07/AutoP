@@ -1,7 +1,8 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.Article_model import Article
+from ..models.ClassificationRun_model import ClassificationRun
 from sqlalchemy.dialects.postgresql import insert
 
 
@@ -38,11 +39,23 @@ class ArticleRepository:
             .where(
                 Article.processing_batch_id == batch_id
             )
+            .order_by(Article.created_at.asc(), Article.id.asc())
         )
         
         result = await self.db.execute(stmt)
         
         return result.scalars().all()
+
+    async def count_classified_by_batch_id(self, batch_id: str) -> int:
+        stmt = (
+            select(func.count(func.distinct(ClassificationRun.article_id)))
+            .join(Article, Article.id == ClassificationRun.article_id)
+            .where(Article.processing_batch_id == batch_id)
+        )
+
+        result = await self.db.execute(stmt)
+
+        return int(result.scalar_one())
 
     async def create(self,article: Article,) -> Article | None: # not using ORM statement here because need to use on conflict method in case duplicate content hash is detected
 
@@ -70,5 +83,3 @@ class ArticleRepository:
     async def delete(self, article: Article) -> None:
         await self.db.delete(article)
         await self.db.flush()
-    
-    

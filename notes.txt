@@ -15,4 +15,4 @@ JSON File in -> 3 Workflows
 database constraint on content hash rn, might wanna remove it because the constraint renders recording model and version moot
 
 
-scp -r ./models dsta@192.168.2.2:/home/dsta/dgx_drive/Rayden/Projects/AutoPOROTW
+scp -r ./models/qwen3.8-27B-FP8 dsta@192.168.2.2:/home/dsta/dgx_drive/Rayden/Projects/AutoPOROTW/models/qwen3.8-27B-FP8

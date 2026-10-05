@@ -42,6 +42,7 @@
 .segmented-progress { width: 100%; display: flex; gap: 4px; height: 6px; }
 .segmented-progress span { flex: 1; border-radius: 99px; background: #19222e; position: relative; overflow: hidden; }
 .segmented-progress span.complete { background: linear-gradient(90deg, #319fe8, #58c7ff); box-shadow: 0 0 12px rgba(54,180,255,.18); }
+.segmented-progress span.failed { background: var(--red); }
 .segmented-progress span.active::after { content: ''; position: absolute; inset: 0; width: 55%; border-radius: inherit; background: var(--blue); animation: shimmer 1.2s ease-in-out infinite alternate; }
 @keyframes shimmer { to { width: 90%; opacity: .65; } }
 .progress-caption { display: flex; justify-content: space-between; margin-top: 8px; color: #7790aa; font-size: 9px; }
@@ -176,6 +177,7 @@ kbd { min-width: 18px; padding: 2px 4px; border: 1px solid #2b3744; border-radiu
 .empty-list, .empty-detail { color: var(--muted); min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 7px; }
 .empty-list strong, .empty-detail h2 { color: var(--text); font-size: 12px; margin: 0; }
 .empty-list span, .empty-detail p { font-size: 10px; margin: 0; }
+.ingest-empty { margin-top: 12px; padding: 42px; }
 
 /* Compile */
 .compile-sidebar { padding-bottom: 20px; }

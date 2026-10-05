@@ -369,13 +369,24 @@ class PipelineOrderingTests(unittest.IsolatedAsyncioTestCase):
             articleService=SimpleNamespace(),
             articleEmbeddingService=FakeEmbeddingService(),
             classificationService=FakeClassificationService(),
+            sessionFactory=FakeSessionFactory(),
         )
+
+        async def finish_batch(batchID, status):
+            calls.append(f"batch-{status.value}")
+
+        pipeline._finish_batch = finish_batch
 
         await pipeline.run_workflows("batch")
 
         self.assertEqual(
             calls,
-            ["embedding-start", "embedding-finish", "classification-start"],
+            [
+                "embedding-start",
+                "embedding-finish",
+                "classification-start",
+                "batch-pending_review",
+            ],
         )
 
 

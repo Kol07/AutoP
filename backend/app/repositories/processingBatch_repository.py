@@ -15,6 +15,17 @@ class ProcessingBatchRepository:
 
         return result.scalar_one_or_none()
 
+    async def get_latest(self) -> ProcessingBatch | None:
+        stmt = (
+            select(ProcessingBatch)
+            .order_by(ProcessingBatch.created_at.desc(), ProcessingBatch.id.desc())
+            .limit(1)
+        )
+
+        result = await self.db.execute(stmt)
+
+        return result.scalar_one_or_none()
+
     async def get_all(
         self,
         *,
@@ -42,5 +53,3 @@ class ProcessingBatchRepository:
     async def delete(self, processingBatch: ProcessingBatch) -> None:
         await self.db.delete(processingBatch)
         await self.db.flush()
-    
-    

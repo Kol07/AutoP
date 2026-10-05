@@ -72,7 +72,7 @@ class ArticleLLMService:
 
     def _get_system_prompt(self) -> str:
         return """
-        TODO
+        [G1.1.1] ANY THINK TANKS
         """
 
     def _build_article_prompt(

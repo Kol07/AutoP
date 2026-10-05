@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowDown, ArrowUp, BrainCircuit, Check, CheckCircle2,
-  ExternalLink, FilePlus2, Scale, Search, ShieldCheck, Sparkles, X,
+  FilePlus2, Scale, Search, ShieldCheck, Sparkles, X,
 } from 'lucide-react'
 import type { Article, ReviewDecision } from '../types'
 import { confidenceLabel, formatDate } from '../utils/format'
@@ -17,25 +17,31 @@ interface ReviewPageProps {
 }
 
 export function ReviewPage({ articles, onDecision, onNoteChange, onCompile }: ReviewPageProps) {
+  const reviewableArticles = useMemo(
+    () => articles.filter((article) => article.classificationReady),
+    [articles],
+  )
   const [filter, setFilter] = useState<ReviewFilter>('pending')
   const [sort, setSort] = useState<ReviewSort>('pipeline')
-  const [selectedId, setSelectedId] = useState(articles.find((article) => article.reviewDecision === 'pending')?.id ?? articles[0]?.id)
+  const [selectedId, setSelectedId] = useState<string>()
 
   const counts = useMemo(() => ({
-    pending: articles.filter((article) => article.reviewDecision === 'pending').length,
-    relevant: articles.filter((article) => article.reviewDecision === 'relevant').length,
-    irrelevant: articles.filter((article) => article.reviewDecision === 'irrelevant').length,
-    all: articles.length,
-  }), [articles])
+    pending: reviewableArticles.filter((article) => article.reviewDecision === 'pending').length,
+    relevant: reviewableArticles.filter((article) => article.reviewDecision === 'relevant').length,
+    irrelevant: reviewableArticles.filter((article) => article.reviewDecision === 'irrelevant').length,
+    all: reviewableArticles.length,
+  }), [reviewableArticles])
 
   const visibleArticles = useMemo(() => {
-    const filtered = filter === 'all' ? [...articles] : articles.filter((article) => article.reviewDecision === filter)
-    if (sort === 'confidence') return filtered.sort((a, b) => b.confidence - a.confidence)
+    const filtered = filter === 'all'
+      ? [...reviewableArticles]
+      : reviewableArticles.filter((article) => article.reviewDecision === filter)
+    if (sort === 'confidence') return filtered.sort((a, b) => (b.confidence ?? -1) - (a.confidence ?? -1))
     if (sort === 'hits') return filtered.sort((a, b) => b.guidelineHits.length - a.guidelineHits.length)
     return filtered.sort((a, b) => a.sequence - b.sequence)
-  }, [articles, filter, sort])
+  }, [reviewableArticles, filter, sort])
 
-  const selected = articles.find((article) => article.id === selectedId) ?? visibleArticles[0] ?? articles[0]
+  const selected = reviewableArticles.find((article) => article.id === selectedId) ?? visibleArticles[0] ?? reviewableArticles[0]
   const selectedPosition = visibleArticles.findIndex((article) => article.id === selected?.id)
 
   function moveSelection(direction: -1 | 1) {
@@ -84,10 +90,10 @@ export function ReviewPage({ articles, onDecision, onNoteChange, onCompile }: Re
             <button key={article.id} className={`review-list-item ${selected?.id === article.id ? 'active' : ''}`} onClick={() => setSelectedId(article.id)}>
               <span className="mono item-meta">#{String(article.sequence).padStart(3, '0')} · {article.source}</span>
               <strong>{article.title}</strong>
-              <span className="item-pills"><span className="score-pill">SIM {article.confidence.toFixed(2)}</span><span className={`hit-pill ${article.guidelineHits.length ? 'has-hits' : ''}`}>{article.guidelineHits.length} {article.guidelineHits.length === 1 ? 'HIT' : 'HITS'}</span></span>
+              <span className="item-pills"><span className="score-pill">SIM {article.confidence === undefined ? 'N/A' : article.confidence.toFixed(2)}</span><span className={`hit-pill ${article.guidelineHits.length ? 'has-hits' : ''}`}>{article.guidelineHits.length} {article.guidelineHits.length === 1 ? 'HIT' : 'HITS'}</span></span>
             </button>
           )) : (
-            <div className="empty-list"><Search size={22} /><strong>No articles here</strong><span>Try a different review filter.</span></div>
+            <div className="empty-list"><Search size={22} /><strong>No articles here</strong><span>{reviewableArticles.length ? 'Try a different review filter.' : 'Articles appear after classification completes.'}</span></div>
           )}
         </div>
       </aside>
@@ -98,38 +104,38 @@ export function ReviewPage({ articles, onDecision, onNoteChange, onCompile }: Re
             <div className="article-title-block">
               <div className="review-meta-row">
                 <span className="eyebrow">Article #{String(selected.sequence).padStart(3, '0')} · {selected.source} · {formatDate(selected.publishedAt)}</span>
-                <div className="article-stepper"><span>{Math.max(1, selectedPosition + 1)} / {visibleArticles.length || articles.length}</span><button onClick={() => moveSelection(-1)} aria-label="Previous article"><ArrowUp size={16} /></button><button onClick={() => moveSelection(1)} aria-label="Next article"><ArrowDown size={16} /></button></div>
+                <div className="article-stepper"><span>{Math.max(1, selectedPosition + 1)} / {visibleArticles.length || reviewableArticles.length}</span><button onClick={() => moveSelection(-1)} aria-label="Previous article"><ArrowUp size={16} /></button><button onClick={() => moveSelection(1)} aria-label="Next article"><ArrowDown size={16} /></button></div>
               </div>
               <h1>{selected.title}</h1>
-              {selected.sourceUrl && <a href={selected.sourceUrl} target="_blank" rel="noreferrer">Open source <ExternalLink size={13} /></a>}
             </div>
 
             <div className="signal-grid">
               <article className="signal-card panel blue">
-                <div className="signal-heading"><span className="signal-icon"><BrainCircuit size={18} /></span><div><strong>Similarity coverage</strong><span className="mono">qwen3-embedding-4b</span></div><div className="signal-score"><strong>{selected.confidence.toFixed(3)}</strong><span>{confidenceLabel(selected.confidence)}</span></div></div>
+                <div className="signal-heading"><span className="signal-icon"><BrainCircuit size={18} /></span><div><strong>Similarity coverage</strong><span className="mono">{selected.embeddingModel ?? 'embedding model'}</span></div><div className="signal-score"><strong>{selected.confidence === undefined ? 'N/A' : selected.confidence.toFixed(3)}</strong><span>{selected.confidence === undefined ? 'unavailable' : confidenceLabel(selected.confidence)}</span></div></div>
                 <div className="match-list">
                   {selected.similarityMatches.map((match, index) => (
-                    <div className="match-row" key={match.id}><span className="mono">{index + 1}</span><div><strong>{match.title}</strong><span className="match-bar"><i style={{ width: `${match.score * 100}%` }} /></span><small className="mono">{match.source}</small></div><span className="mono">{match.score.toFixed(3)}</span></div>
+                    <div className="match-row" key={match.id}><span className="mono">{index + 1}</span><div><strong>{match.title}</strong><span className="match-bar"><i style={{ width: `${Math.max(0, match.score) * 100}%` }} /></span><small className="mono">{match.source} · {match.relevanceResult}</small></div><span className="mono">{match.score.toFixed(3)}</span></div>
                   ))}
+                  {!selected.similarityMatches.length && <div className="no-signal"><Search size={20} /><span>No persisted similarity matches.</span></div>}
                 </div>
               </article>
 
               <article className="signal-card panel amber">
-                <div className="signal-heading"><span className="signal-icon"><Scale size={18} /></span><div><strong>Guideline check</strong><span className="mono">qwen3.8-27B-FP8</span></div><div className="signal-score"><strong>{selected.guidelineHits.length}</strong><span>guideline {selected.guidelineHits.length === 1 ? 'hit' : 'hits'}</span></div></div>
+                <div className="signal-heading"><span className="signal-icon"><Scale size={18} /></span><div><strong>Guideline check</strong><span className="mono">{selected.llmModel ?? 'classification model'}</span></div><div className="signal-score"><strong>{selected.guidelineHits.length}</strong><span>guideline {selected.guidelineHits.length === 1 ? 'hit' : 'hits'}</span></div></div>
                 {selected.guidelineHits.length ? selected.guidelineHits.map((hit) => (
-                  <div className="guideline-hit" key={hit.id}><div><span className="hit-code mono">{hit.id}</span><strong>{hit.label}</strong><span className="amber-text mono">{Math.round(hit.confidence * 100)}%</span></div><p>{hit.reason}</p></div>
+                  <div className="guideline-hit" key={hit.id}><div><span className="hit-code mono">{hit.id}</span></div><p>{hit.reason}</p></div>
                 )) : <div className="no-signal"><ShieldCheck size={20} /><span>No guideline signal detected.</span></div>}
               </article>
 
               <article className="signal-card panel violet motherhood-card">
-                <div className="signal-heading"><span className="signal-icon"><Sparkles size={18} /></span><div><strong>Public-interest check</strong><span className="mono">motherhood statement</span></div><span className={`decision-chip ${selected.motherhoodResult}`}>{selected.motherhoodResult}</span></div>
-                <p>{selected.motherhoodReason}</p>
+                <div className="signal-heading"><span className="signal-icon"><Sparkles size={18} /></span><div><strong>Public-interest check</strong><span className="mono">motherhood statement</span></div><span className={`decision-chip ${selected.motherhoodResult}`}>{selected.motherhoodResult ?? 'unavailable'}</span></div>
+                <p>{selected.motherhoodReason || 'No persisted public-interest reason.'}</p>
               </article>
             </div>
 
-            <article className="full-text-card panel"><div className="eyebrow">Full text · {selected.wordCount} words</div>{selected.content.split(/\n\s*\n/).map((paragraph) => <p key={paragraph.slice(0, 40)}>{paragraph}</p>)}</article>
+            <article className="full-text-card panel"><div className="eyebrow">Full text · {selected.wordCount} words</div>{selected.content.split(/\n\s*\n/).map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 40)}`}>{paragraph}</p>)}</article>
 
-            <label className="reviewer-note"><span className="eyebrow">Reviewer note</span><textarea placeholder="Optional context — included with the review decision." value={selected.reviewerNote} onChange={(event) => onNoteChange(selected.id, event.target.value)} /></label>
+            <label className="reviewer-note"><span className="eyebrow">Reviewer note · saved for this session only</span><textarea placeholder="Optional context — review persistence will be added later." value={selected.reviewerNote} onChange={(event) => onNoteChange(selected.id, event.target.value)} /></label>
 
             <div className="review-action-bar">
               <div className="shortcut-hint"><kbd>J</kbd><kbd>K</kbd><span>navigate</span><kbd>R</kbd><span>relevant</span><kbd>X</kbd><span>not relevant</span></div>
@@ -141,7 +147,7 @@ export function ReviewPage({ articles, onDecision, onNoteChange, onCompile }: Re
             </div>
           </>
         ) : (
-          <div className="empty-detail"><CheckCircle2 size={34} /><h2>Queue clear</h2><p>No articles match this filter.</p></div>
+          <div className="empty-detail"><CheckCircle2 size={34} /><h2>{reviewableArticles.length ? 'Queue clear' : 'Nothing ready for review'}</h2><p>{reviewableArticles.length ? 'No articles match this filter.' : 'Wait for the ingest pipeline to finish classifying articles.'}</p></div>
         )}
       </section>
     </main>

@@ -54,7 +54,7 @@ export function CompilePage({ articles, compilations, activeCompilationId, onSel
               return (
                 <button className={`compile-article ${included ? 'included' : ''}`} key={article.id} onClick={() => toggleArticle(article.id)}>
                   <span className="include-box">{included ? <Check size={13} /> : <Plus size={13} />}</span>
-                  <span><strong>{article.title}</strong><small className="mono">{article.source} · SIM {article.confidence.toFixed(2)}</small></span>
+                  <span><strong>{article.title}</strong><small className="mono">{article.source} · SIM {article.confidence === undefined ? 'N/A' : article.confidence.toFixed(2)}</small></span>
                 </button>
               )
             })}

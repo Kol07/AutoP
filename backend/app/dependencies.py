@@ -124,4 +124,5 @@ def get_pipeline_service(
         articleService=articleService,
         articleEmbeddingService=articleEmbeddingService,
         classificationService=classificationService,
+        sessionFactory=AsyncSessionLocal,
     )

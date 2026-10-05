@@ -1,34 +1,74 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AppHeader } from './components/AppHeader'
 import { Toast } from './components/Toast'
-import { demoArticles, demoCompilations } from './data/demoData'
-import { usePipelineSimulation } from './hooks/usePipelineSimulation'
+import { useProcessingBatch } from './hooks/useProcessingBatch'
 import { CompilePage } from './pages/CompilePage'
 import { IngestPage } from './pages/IngestPage'
 import { ReviewPage } from './pages/ReviewPage'
-import type { Article, Compilation, ReviewDecision, Stage } from './types'
+import type { Article, Compilation, ReviewDecision, RunStatus, Stage } from './types'
+import { mapBatchArticles } from './utils/processingBatch'
 import './App.css'
 
-function App() {
-  const [stage, setStage] = useState<Stage>('ingest')
-  const [articles, setArticles] = useState<Article[]>(demoArticles)
-  const [compilations, setCompilations] = useState<Compilation[]>(demoCompilations)
-  const [activeCompilationId, setActiveCompilationId] = useState(demoCompilations[0].id)
-  const [toast, setToast] = useState('')
-  const pipeline = usePipelineSimulation({ articles, setArticles })
+function createCompilation(articles: Article[]): Compilation {
+  const timestamp = new Date().toISOString()
+  return {
+    id: `comp-${Date.now()}`,
+    title: 'Untitled briefing',
+    introduction: 'Articles reviewed and marked relevant by the classification team.',
+    articleIds: articles
+      .filter((article) => article.reviewDecision === 'relevant')
+      .map((article) => article.id),
+    previewMode: 'lead',
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }
+}
 
-  const pendingCount = articles.filter((article) => article.reviewDecision === 'pending').length
-  const processedCount = articles.filter((article) => Object.values(article.workflows).every((task) => task.status === 'complete')).length
+interface WorkspaceProps {
+  pipeline: ReturnType<typeof useProcessingBatch>
+  stage: Stage
+  setStage: (stage: Stage) => void
+  setToast: (message: string) => void
+}
+
+function Workspace({ pipeline, stage, setStage, setToast }: WorkspaceProps) {
+  const baseArticles = useMemo(
+    () => pipeline.batch ? mapBatchArticles(pipeline.batch) : [],
+    [pipeline.batch],
+  )
+  const [articleOverrides, setArticleOverrides] = useState<Record<string, Partial<Article>>>({})
+  const articles = useMemo(
+    () => baseArticles.map((article) => ({ ...article, ...articleOverrides[article.id] })),
+    [articleOverrides, baseArticles],
+  )
+  const [initialCompilation] = useState(() => (
+    pipeline.batch && pipeline.batch.status !== 'processing'
+      ? createCompilation(baseArticles)
+      : null
+  ))
+  const [compilations, setCompilations] = useState<Compilation[]>(() => initialCompilation ? [initialCompilation] : [])
+  const [activeCompilationId, setActiveCompilationId] = useState(initialCompilation?.id ?? '')
+
+  const pendingCount = articles.filter((article) => article.classificationReady && article.reviewDecision === 'pending').length
+  const processedCount = pipeline.batch?.processedArticles ?? 0
   const activeCompilation = compilations.find((item) => item.id === activeCompilationId)
+  const runStatus: RunStatus = pipeline.loading || pipeline.submitting || pipeline.batch?.status === 'processing'
+    ? 'running'
+    : pipeline.batch?.status === 'failed'
+      ? 'failed'
+      : pipeline.batch
+        ? 'complete'
+        : 'idle'
 
-  useEffect(() => {
-    if (!toast) return
-    const timer = window.setTimeout(() => setToast(''), 3200)
-    return () => window.clearTimeout(timer)
-  }, [toast])
+  function updateArticle(articleId: string, changes: Partial<Article>) {
+    setArticleOverrides((current) => ({
+      ...current,
+      [articleId]: { ...current[articleId], ...changes },
+    }))
+  }
 
   function updateDecision(articleId: string, decision: Exclude<ReviewDecision, 'pending'>) {
-    setArticles((current) => current.map((article) => article.id === articleId ? { ...article, reviewDecision: decision } : article))
+    updateArticle(articleId, { reviewDecision: decision })
     setCompilations((current) => current.map((compilation) => {
       if (compilation.id !== activeCompilationId) return compilation
       const articleIds = decision === 'relevant'
@@ -43,16 +83,7 @@ function App() {
   }
 
   function newCompilation() {
-    const timestamp = new Date().toISOString()
-    const compilation: Compilation = {
-      id: `comp-${Date.now()}`,
-      title: 'Untitled briefing',
-      introduction: 'Articles reviewed and marked relevant by the classification team.',
-      articleIds: articles.filter((article) => article.reviewDecision === 'relevant').map((article) => article.id),
-      previewMode: 'lead',
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    }
+    const compilation = createCompilation(articles)
     setCompilations((current) => [compilation, ...current])
     setActiveCompilationId(compilation.id)
     setToast('New briefing created')
@@ -69,26 +100,27 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
+    <>
       <AppHeader
         stage={stage}
         onStageChange={setStage}
-        ingestCount={`${processedCount}/${articles.length}`}
+        ingestCount={`${processedCount}/${pipeline.batch?.totalArticles ?? 0}`}
         reviewCount={`${pendingCount} pending`}
         compileCount={`${activeCompilation?.articleIds.length ?? 0} in doc`}
-        runStatus={pipeline.runStatus}
+        runStatus={runStatus}
       />
 
       {stage === 'ingest' && (
         <IngestPage
           articles={articles}
-          runStatus={pipeline.runStatus}
-          fileName={pipeline.fileName}
-          elapsedMs={pipeline.elapsedMs}
+          batch={pipeline.batch}
+          runStatus={runStatus}
+          loading={pipeline.loading}
+          submitting={pipeline.submitting}
+          error={pipeline.error}
           onStart={pipeline.startBatch}
-          onPause={pipeline.pause}
-          onResume={pipeline.resume}
-          onRestart={pipeline.restart}
+          onRefresh={pipeline.refresh}
+          onRetry={pipeline.loadLatest}
           onReview={() => setStage('review')}
         />
       )}
@@ -96,7 +128,7 @@ function App() {
         <ReviewPage
           articles={articles}
           onDecision={updateDecision}
-          onNoteChange={(articleId, reviewerNote) => setArticles((current) => current.map((article) => article.id === articleId ? { ...article, reviewerNote } : article))}
+          onNoteChange={(articleId, reviewerNote) => updateArticle(articleId, { reviewerNote })}
           onCompile={() => setStage('compile')}
         />
       )}
@@ -116,6 +148,31 @@ function App() {
           onPrototypeExport={(format) => setToast(`${format} export is visual-only in this prototype`)}
         />
       )}
+    </>
+  )
+}
+
+function App() {
+  const [stage, setStage] = useState<Stage>('ingest')
+  const [toast, setToast] = useState('')
+  const pipeline = useProcessingBatch()
+  const workspaceKey = `${pipeline.batch?.id ?? 'empty'}-${pipeline.batch?.status === 'processing' ? 'processing' : 'settled'}`
+
+  useEffect(() => {
+    if (!toast) return
+    const timer = window.setTimeout(() => setToast(''), 3200)
+    return () => window.clearTimeout(timer)
+  }, [toast])
+
+  return (
+    <div className="app-shell">
+      <Workspace
+        key={workspaceKey}
+        pipeline={pipeline}
+        stage={stage}
+        setStage={setStage}
+        setToast={setToast}
+      />
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   )
